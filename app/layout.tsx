@@ -48,6 +48,7 @@ export const viewport = {
 };
 
 import { PWARegister } from "@/components/PWARegister";
+import { OfflineIndicator } from "@/components/dashboard/OfflineIndicator";
 
 export default function RootLayout({
   children,
@@ -58,6 +59,7 @@ export default function RootLayout({
     <html lang="id" className={`${geistSans.variable} h-full antialiased`}>
       <body className="min-h-full">
         <PWARegister />
+        <OfflineIndicator />
         {children}
       </body>
     </html>
