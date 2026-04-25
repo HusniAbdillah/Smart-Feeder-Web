@@ -45,7 +45,7 @@ export function SensorCard({ title, value, unit, icon, status, trend }: SensorCa
       )}
     >
       <div className="flex items-start justify-between">
-        <p className="text-[11px] sm:text-[13px] font-bold uppercase tracking-wider text-text-main/60">
+        <p className="text-[11px] sm:text-[13px] font-bold uppercase tracking-wider text-text-main/70">
           {title}
         </p>
         <span className={cn("shrink-0 scale-90 sm:scale-125 origin-top-right", ICON_CLASS[status])}>
@@ -64,7 +64,7 @@ export function SensorCard({ title, value, unit, icon, status, trend }: SensorCa
             {displayValue}
           </span>
           {unit && (
-            <span className="text-sm sm:text-xl font-bold text-text-main/40">
+            <span className="text-sm sm:text-xl font-bold text-text-main/50">
               {unit}
             </span>
           )}

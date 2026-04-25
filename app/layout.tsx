@@ -44,7 +44,6 @@ export const viewport = {
   themeColor: "#1B4965",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 import { PWARegister } from "@/components/PWARegister";

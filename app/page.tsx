@@ -18,9 +18,20 @@ import {
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SensorCard } from "@/components/dashboard/SensorCard";
 import { ExportControls } from "@/components/dashboard/ExportControls";
-import { TemperatureChart } from "@/components/charts/TemperatureChart";
-import { CorrelationChart } from "@/components/charts/CorrelationChart";
-import { PhChart } from "@/components/charts/PhChart";
+import dynamic from "next/dynamic";
+
+const TemperatureChart = dynamic(() => import("@/components/charts/TemperatureChart").then(mod => mod.TemperatureChart), {
+  ssr: false,
+  loading: () => <div className="h-72 w-full animate-pulse bg-text-main/5 rounded-xl" />
+});
+const CorrelationChart = dynamic(() => import("@/components/charts/CorrelationChart").then(mod => mod.CorrelationChart), {
+  ssr: false,
+  loading: () => <div className="h-72 w-full animate-pulse bg-text-main/5 rounded-xl" />
+});
+const PhChart = dynamic(() => import("@/components/charts/PhChart").then(mod => mod.PhChart), {
+  ssr: false,
+  loading: () => <div className="h-72 w-full animate-pulse bg-text-main/5 rounded-xl" />
+});
 import { cn } from "@/lib/utils";
 import type { ApiDataResponse, WQIStatus } from "@/types";
 
@@ -105,7 +116,7 @@ async function DashboardContent() {
         </div>
 
         <div className="flex flex-col items-center md:items-end gap-3 pt-2">
-          <div className="text-[11px] md:text-sm font-bold uppercase tracking-wider text-text-main/40 whitespace-nowrap bg-surface px-3 py-1.5 rounded-full border border-text-main/5 shadow-sm">
+          <div className="text-[11px] md:text-sm font-bold uppercase tracking-wider text-text-main/60 whitespace-nowrap bg-surface px-3 py-1.5 rounded-full border border-text-main/5 shadow-sm">
             Terakhir diperbarui: {updatedAt}
           </div>
           <ExportControls data={history} />
@@ -123,32 +134,32 @@ async function DashboardContent() {
           {/* Left Side: Main Score */}
           <div className="flex items-center gap-4 sm:gap-6">
             <div className="shrink-0">
-              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-text-main/50">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-text-main/60">
                 WQI Indeks
               </p>
               <div className="flex items-baseline gap-1">
                 <span className="text-5xl font-black tabular-nums text-text-main sm:text-7xl">
                   {wqi.score}
                 </span>
-                <span className="text-[10px] font-medium text-text-main/40 uppercase">Score</span>
+                <span className="text-[10px] font-medium text-text-main/60 uppercase">Score</span>
               </div>
             </div>
             
-            <div className="h-10 w-px bg-text-main/10" />
+            <div className="h-10 w-px bg-text-main/20" />
             
             <div className="flex flex-col gap-1">
               <StatusBadge status={wqi.status} size="md" />
-              <span className="text-[9px] font-bold text-text-main/40 uppercase tracking-tight">
+              <span className="text-[9px] font-bold text-text-main/60 uppercase tracking-tight">
                 Kondisi Air
               </span>
             </div>
           </div>
 
           {/* Right Side: Sub-scores Grid */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-6 border-t border-text-main/5 pt-4 md:border-t-0 md:pt-0">
+          <div className="grid grid-cols-3 gap-2 sm:gap-6 border-t border-text-main/10 pt-4 md:border-t-0 md:pt-0">
             {subScores.map(({ label, score }) => (
               <div key={label} className="flex flex-col">
-                <span className="text-[11px] sm:text-[13px] font-bold uppercase tracking-tight text-text-main/50 line-clamp-1">
+                <span className="text-[11px] sm:text-[13px] font-bold uppercase tracking-tight text-text-main/60 line-clamp-1">
                   {label}
                 </span>
                 <span className="text-2xl sm:text-3xl font-black text-text-main">
@@ -275,7 +286,7 @@ import { AutoRefresh } from "@/components/dashboard/AutoRefresh";
 
 export default function Page() {
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background">
       <AutoRefresh intervalMs={30000} />
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <Suspense
@@ -283,7 +294,7 @@ export default function Page() {
             <div className="flex min-h-[80vh] items-center justify-center rounded-2xl bg-surface shadow-sm">
               <div className="flex flex-col items-center gap-4">
                 <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                <p className="text-lg font-medium text-text-main/50 animate-pulse">Memuat dashboard...</p>
+                <p className="text-lg font-medium text-text-main/60 animate-pulse">Memuat dashboard...</p>
               </div>
             </div>
           }
@@ -291,6 +302,6 @@ export default function Page() {
           <DashboardContent />
         </Suspense>
       </div>
-    </div>
+    </main>
   );
 }
