@@ -8,37 +8,29 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://smartfeeder.my.id"),
+
   title: "Smart Feeder",
   description: "Pemantauan kualitas air real-time berbasis IoT.",
-  manifest: "/manifest.json",
 
   openGraph: {
     title: "Smart Feeder",
     description: "Pemantauan kualitas air real-time berbasis IoT.",
-    url: "https://smartfeeder.my.id",
+    url: "/",
     siteName: "Smart Feeder",
     images: [
       {
-        url: "https://smartfeeder.my.id/1.png",
+        url: "/1.png",
         width: 1200,
         height: 630,
       },
     ],
-    locale: "id_ID",
     type: "website",
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "Smart Feeder",
-    description: "Pemantauan kualitas air real-time berbasis IoT.",
-    images: ["https://smartfeeder.my.id/1.png"],
-  },
-
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Smart Feeder",
+    images: ["/1.png"],
   },
 };
 
