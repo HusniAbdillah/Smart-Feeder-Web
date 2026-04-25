@@ -22,9 +22,9 @@ const COLORS = {
 };
 
 const LINES: { key: keyof SmartFeederSensorData; label: string; color: string }[] = [
-  { key: "surfaceTemp", label: "Suhu Permukaan", color: COLORS.surface },
-  { key: "midTemp", label: "Suhu Tengah", color: COLORS.mid },
-  { key: "bottomTemp", label: "Suhu Dasar", color: COLORS.bottom },
+  { key: "surfaceTemp", label: "Suhu Permukaan (°C)", color: COLORS.surface },
+  { key: "midTemp",   label: "Suhu Tengah (°C)", color: COLORS.mid },
+  { key: "bottomTemp", label: "Suhu Dasar (°C)", color: COLORS.bottom },
 ];
 
 export function TemperatureChart({ initialData }: { initialData?: SmartFeederSensorData[] }) {
