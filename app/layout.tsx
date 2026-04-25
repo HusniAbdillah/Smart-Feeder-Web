@@ -12,6 +12,12 @@ export const metadata: Metadata = {
 
   title: "Smart Feeder",
   description: "Pemantauan kualitas air real-time berbasis IoT.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Smart Feeder",
+  },
 
   openGraph: {
     title: "Smart Feeder",
@@ -41,6 +47,8 @@ export const viewport = {
   maximumScale: 1,
 };
 
+import { PWARegister } from "@/components/PWARegister";
+
 export default function RootLayout({
   children,
 }: {
@@ -48,7 +56,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <PWARegister />
+        {children}
+      </body>
     </html>
   );
 }
