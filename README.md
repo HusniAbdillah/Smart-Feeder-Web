@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Smart Feeder Dashboard
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/TailwindCSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" />
+  <img src="https://img.shields.io/badge/Recharts-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white" />
+  <img src="https://img.shields.io/badge/ThingSpeak-00A4EF?style=for-the-badge&logo=mathworks&logoColor=white" />
+  <img src="https://img.shields.io/badge/PhosphorIcons-3C402B?style=for-the-badge&logo=ionic&logoColor=white" />
+</p>
+
+<p align="center">
+  Smart aquaculture monitoring dashboard with real-time analytics and intelligent insights
+</p>
+
+
+<p align="center" style="display:flex; justify-content:center; gap:10px;">
+  <img src="public/1.png" style="width:45%; max-width:500px;" />
+</p>
+
+## Overview
+
+The Smart Feeder Dashboard is built to transform raw sensor data into meaningful information. By monitoring critical parameters like Dissolved Oxygen (DO), pH levels, and Temperature stratification, it helps aquaculture operators maintain optimal conditions for aquatic life, reducing risks and improving yield.
+
+## Key Features
+
+- **Real-Time Monitoring**: Instant visualization of 6 critical sensor metrics with trend indicators.
+- **Water Quality Index (WQI)**: An automated scoring system (0-100) that summarizes overall water health.
+- **Advanced Analytics**:
+  - **Temperature Stratification**: Analysis of Surface, Mid, and Bottom temperatures to detect upwelling.
+  - **Correlation Mapping**: Visualizing the relationship between Temperature and Dissolved Oxygen.
+  - **pH Trend Analysis**: Monitoring acidity levels with predefined safety thresholds.
+- **Progressive Web App (PWA)**: Fully responsive, mobile-first design that can be installed on mobile devices for a native-like experience.
+- **Data Export**: One-click CSV export for external research and historical auditing.
+- **Auto-Refresh**: Seamless background data synchronization every 30 seconds.
+
+<p align="center" style="display:flex; justify-content:center; gap:10px;">
+  <img src="public/2.png" style="width:45%; max-width:240px;" />
+  <img src="public/3.png" style="width:45%; max-width:410px;" />
+</p>
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Node.js 18.x or later
+- npm or yarn
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/HusniAbdillah/Smart-Feeder-Web.git
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-## Learn More
+3. Configure Environment Variables:
+   Create a `.env.local` file in the root directory and add your ThingSpeak credentials:
+   ```env
+   THINGSPEAK_CHANNEL_ID=your_channel_id
+   THINGSPEAK_READ_API_KEY=your_api_key
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+5. Build for production:
+   ```bash
+   npm run build
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is developed for aquaculture optimization and research purposes.
