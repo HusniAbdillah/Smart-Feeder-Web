@@ -271,9 +271,12 @@ async function DashboardContent() {
   );
 }
 
+import { AutoRefresh } from "@/components/dashboard/AutoRefresh";
+
 export default function Page() {
   return (
     <div className="min-h-screen bg-background">
+      <AutoRefresh intervalMs={30000} />
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <Suspense
           fallback={
