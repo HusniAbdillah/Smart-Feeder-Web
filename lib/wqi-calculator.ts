@@ -62,7 +62,6 @@ function round1(n: number): number {
 /**
  * Calculates Water Quality Index (WQI) for aquaculture.
  * Uses DO, pH, and weighted average temperature (T_avg).
- * Temperature stratification is NOT included in WQI, but can be flagged separately.
  */
 export function calculateWQI(data: SmartFeederSensorData): WQIResult {
   // Weighted average temperature (middle layer weighted double)
@@ -103,7 +102,6 @@ export function calculateWQI(data: SmartFeederSensorData): WQIResult {
 
 /**
  * Generate insight string based on the worst parameter (DO, pH, or Temp).
- * Uses weighted average temperature for WQI, but you can display stratification separately.
  */
 export function generateInsights(data: SmartFeederSensorData): string {
   const tempAvg = (data.surfaceTemp + 2 * data.midTemp + data.bottomTemp) / 4;

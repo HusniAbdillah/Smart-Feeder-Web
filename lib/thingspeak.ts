@@ -51,14 +51,7 @@ export async function fetchThingSpeakFeeds(range: string = "1h"): Promise<ApiDat
     else if (range === "1m") timeParam = "days=30";
     else if (range === "all") timeParam = "results=8000";
     else if (range === "1h") timeParam = "minutes=60";
-
-    // For trends, we need at least 1 hour of data.
-    // If range is e.g. "1h", it naturally includes the last hour.
-    // If it's something else, it will have more data.
-    
-    // We always want to calculate 1-hour trend, so if range is too small (e.g. we only fetch last 5 mins),
-    // we wouldn't have 1 hour ago data. But we don't have smaller ranges than 1h.
-    
+       
     const url = `https://api.thingspeak.com/channels/${channelId}/feeds.json?api_key=${apiKey}&${timeParam}`;
 
     const res = await fetch(url);

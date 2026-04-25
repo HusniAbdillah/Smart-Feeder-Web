@@ -14,7 +14,6 @@ export function ExportControls({ data }: ExportControlsProps) {
       return;
     }
 
-    // CSV Headers
     const headers = [
       "Waktu",
       "Suhu Permukaan (°C)",
@@ -36,13 +35,11 @@ export function ExportControls({ data }: ExportControlsProps) {
       d.depth.toString()
     ]);
 
-    // Construct CSV string
     const csvContent = [
       headers.join(","),
       ...rows.map((e) => e.join(","))
     ].join("\n");
 
-    // Create Blob and download link
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

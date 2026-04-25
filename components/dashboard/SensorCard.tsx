@@ -39,57 +39,57 @@ export function SensorCard({ title, value, unit, icon, status, trend }: SensorCa
   return (
     <div
       className={cn(
-        "relative flex flex-col justify-between gap-4 rounded-2xl bg-surface p-6 shadow-sm",
+        "relative flex flex-col justify-between gap-3 rounded-2xl bg-surface p-4 sm:p-6 shadow-sm",
         "border-l-4",
         BORDER_CLASS[status],
       )}
     >
       <div className="flex items-start justify-between">
-        <p className="text-sm font-semibold uppercase tracking-widest text-text-main/50">
+        <p className="text-[11px] sm:text-[13px] font-bold uppercase tracking-wider text-text-main/60">
           {title}
         </p>
-        <span className={cn("shrink-0", ICON_CLASS[status])}>
+        <span className={cn("shrink-0 scale-90 sm:scale-125 origin-top-right", ICON_CLASS[status])}>
           {icon}
         </span>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <div className="flex items-end gap-2 leading-none">
+      <div className="flex flex-col gap-0">
+        <div className="flex items-baseline gap-1 leading-none">
           <span
             className={cn(
-              "text-5xl font-black tabular-nums",
+              "text-4xl sm:text-6xl font-black tabular-nums",
               VALUE_CLASS[status],
             )}
           >
             {displayValue}
           </span>
           {unit && (
-            <span className="mb-1 text-lg font-semibold text-text-main/40">
+            <span className="text-sm sm:text-xl font-bold text-text-main/40">
               {unit}
             </span>
           )}
         </div>
         
         {typeof trend === "number" && (
-          <div className="flex items-center gap-1 text-xs font-medium mt-2">
+          <div className="flex items-center gap-1 text-[11px] sm:text-sm font-semibold mt-3">
             {trend > 0 ? (
               <>
-                <TrendUp weight="bold" className="text-status-warning" />
-                <span className="text-text-main/60">
-                  Naik <span className="font-bold">{Math.abs(trend).toFixed(1)}{unit}</span> dari 1 jam lalu
+                <TrendUp weight="bold" className="text-status-warning shrink-0" />
+                <span className="text-text-main/70 truncate">
+                  <span className="font-bold">+{Math.abs(trend).toFixed(1)}</span> <span className="hidden sm:inline">lebih tinggi dari 1j lalu</span>
                 </span>
               </>
             ) : trend < 0 ? (
               <>
-                <TrendDown weight="bold" className="text-status-safe" />
-                <span className="text-text-main/60">
-                  Turun <span className="font-bold">{Math.abs(trend).toFixed(1)}{unit}</span> dari 1 jam lalu
+                <TrendDown weight="bold" className="text-status-safe shrink-0" />
+                <span className="text-text-main/70 truncate">
+                  <span className="font-bold">-{Math.abs(trend).toFixed(1)}</span> <span className="hidden sm:inline">lebih rendah dari 1j lalu</span>
                 </span>
               </>
             ) : (
               <>
-                <Minus weight="bold" className="text-text-main/40" />
-                <span className="text-text-main/40">Stabil dari 1 jam lalu</span>
+                <Minus weight="bold" className="text-text-main/40 shrink-0" />
+                <span className="text-text-main/50 truncate uppercase tracking-tighter">Stabil</span>
               </>
             )}
           </div>

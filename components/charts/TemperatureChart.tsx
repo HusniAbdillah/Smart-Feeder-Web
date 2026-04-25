@@ -15,7 +15,6 @@ import type { SmartFeederSensorData, FilterRange, ApiDataResponse } from "@/type
 import { ChartFilter } from "./ChartFilter";
 import { formatTimestamp } from "@/lib/format";
 
-// Shared color mapping
 const COLORS = {
   surface: "#E76F51", // Warm
   mid: "#E9C46A",     // Neutral
@@ -52,9 +51,6 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
   }, []);
 
   useEffect(() => {
-    // Only fetch if it's not the initial load or if initialData wasn't provided for this range
-    // For simplicity, we just fetch on filter change if it's not the default "1h"
-    // Since page load passes default data
     if (filter !== "1h" || !initialData) {
       fetchData(filter);
     } else {

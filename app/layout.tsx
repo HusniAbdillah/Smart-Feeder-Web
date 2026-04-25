@@ -9,7 +9,7 @@ const geistSans = Geist({
 
 export const metadata: Metadata = {
   title: "Smart Feeder",
-  description: "Sistem pemantauan kualitas air tambak secara real-time berbasis IoT.",
+  description: "Pemantauan kualitas air real-time berbasis IoT.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

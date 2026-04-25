@@ -24,7 +24,6 @@ import { PhChart } from "@/components/charts/PhChart";
 import { cn } from "@/lib/utils";
 import type { ApiDataResponse, WQIStatus } from "@/types";
 
-// Note: Assuming logo.png is present in app directory
 import logoImg from "./logo.png";
 
 const WQI_HERO_STYLE: Record<WQIStatus, string> = {
@@ -37,7 +36,6 @@ async function DashboardContent() {
   let result: ApiDataResponse | null = null;
 
   try {
-    // Top grid always uses 1h default
     result = await fetchThingSpeakFeeds("1h");
   } catch {
   }
@@ -83,53 +81,77 @@ async function DashboardContent() {
 
   return (
     <div className="space-y-8">
-      {/* Controls: Export & Timestamp */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4 mb-4">
-        <div className="flex items-center gap-4 justify-between sm:justify-end w-full">
-          <div className="text-sm font-medium text-text-main/50 whitespace-nowrap">
+      {/* ── Header & Top Controls ──────────────────────────────── */}
+      <header className="flex flex-col items-center gap-6 md:flex-row md:items-start md:justify-between mb-12">
+        <div className="flex flex-col items-center text-center md:flex-row md:items-center md:text-left gap-6">
+          <div className="relative shrink-0">
+            <Image 
+              src={logoImg} 
+              alt="Smart Feeder Logo" 
+              width={120} 
+              height={120} 
+              className="drop-shadow-lg rounded-full w-20 h-20 md:w-32 md:h-32 border-4 border-surface"
+              priority
+            />
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-3xl md:text-6xl font-black tracking-tight text-primary">
+              Smart Feeder
+            </h1>
+            <p className="mt-1 text-xs md:text-xl font-bold text-text-main/60">
+              Pemantauan Kualitas Air Real-time Berbasis IoT
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center md:items-end gap-3 pt-2">
+          <div className="text-[11px] md:text-sm font-bold uppercase tracking-wider text-text-main/40 whitespace-nowrap bg-surface px-3 py-1.5 rounded-full border border-text-main/5 shadow-sm">
             Terakhir diperbarui: {updatedAt}
           </div>
           <ExportControls data={history} />
         </div>
-      </div>
+      </header>
 
       {/* WQI Hero */}
       <section
         className={cn(
-          "rounded-3xl border-2 p-6 sm:p-8 shadow-sm",
+          "rounded-3xl border-2 p-6 sm:p-8 shadow-sm transition-all duration-300",
           WQI_HERO_STYLE[wqi.status],
         )}
       >
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          {/* Score block */}
-          <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-text-main/50">
-              Indeks Kualitas Air (WQI)
-            </p>
-            <div className="flex flex-wrap items-end gap-4">
-              <span className="text-7xl font-black leading-none tabular-nums text-text-main sm:text-8xl">
-                {wqi.score}
-              </span>
-              <div className="mb-2 flex flex-col items-start gap-2">
-                <StatusBadge status={wqi.status} size="lg" />
-                <span className="text-xs text-text-main/40">
-                  skala 0 hingga 100
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-center">
+          {/* Left Side: Main Score */}
+          <div className="flex items-center gap-4 sm:gap-6">
+            <div className="shrink-0">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-text-main/50">
+                WQI Indeks
+              </p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-5xl font-black tabular-nums text-text-main sm:text-7xl">
+                  {wqi.score}
                 </span>
+                <span className="text-[10px] font-medium text-text-main/40 uppercase">Score</span>
               </div>
+            </div>
+            
+            <div className="h-10 w-px bg-text-main/10" />
+            
+            <div className="flex flex-col gap-1">
+              <StatusBadge status={wqi.status} size="md" />
+              <span className="text-[9px] font-bold text-text-main/40 uppercase tracking-tight">
+                Kondisi Air
+              </span>
             </div>
           </div>
 
-          {/* Sub-scores panel */}
-          <div className="flex flex-wrap gap-4 lg:flex-col lg:items-end sm:gap-8">
+          {/* Right Side: Sub-scores Grid */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-6 border-t border-text-main/5 pt-4 md:border-t-0 md:pt-0">
             {subScores.map(({ label, score }) => (
-              <div
-                key={label}
-                className="flex flex-col items-start gap-0.5 lg:items-end w-[calc(50%-8px)] sm:w-auto"
-              >
-                <span className="text-xs font-medium text-text-main/45">
+              <div key={label} className="flex flex-col">
+                <span className="text-[11px] sm:text-[13px] font-bold uppercase tracking-tight text-text-main/50 line-clamp-1">
                   {label}
                 </span>
-                <span className="text-2xl font-black tabular-nums text-text-main">
+                <span className="text-2xl sm:text-3xl font-black text-text-main">
                   {score}
                 </span>
               </div>
@@ -164,7 +186,7 @@ async function DashboardContent() {
         <h2 className="mb-4 text-lg sm:text-xl font-bold text-text-main px-1">
           Data Sensor Terkini
         </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
           <SensorCard
             title="Suhu Permukaan"
             value={latest.surfaceTemp}
@@ -253,27 +275,13 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-10 flex flex-col items-center justify-center text-center">
-          <Image 
-            src={logoImg} 
-            alt="Smart Feeder Logo" 
-            width={72} 
-            height={72} 
-            className="mb-3 drop-shadow-sm rounded-full sm:w-20 sm:h-20"
-            priority
-          />
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-primary">
-            Smart Feeder
-          </h1>
-          <p className="mt-1.5 text-xs sm:text-sm font-medium uppercase tracking-widest text-text-main/60">
-            Pemantauan Kualitas Air Real-time
-          </p>
-        </header>
-
         <Suspense
           fallback={
-            <div className="flex min-h-72 items-center justify-center rounded-2xl bg-surface shadow-sm">
-              <p className="text-lg text-text-main/50">Memuat data sensor...</p>
+            <div className="flex min-h-[80vh] items-center justify-center rounded-2xl bg-surface shadow-sm">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                <p className="text-lg font-medium text-text-main/50 animate-pulse">Memuat dashboard...</p>
+              </div>
             </div>
           }
         >
