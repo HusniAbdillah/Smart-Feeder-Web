@@ -15,27 +15,23 @@ import type { SmartFeederSensorData, FilterRange, ApiDataResponse } from "@/type
 import { ChartFilter } from "./ChartFilter";
 import { formatTimestamp } from "@/lib/format";
 
-// Shared color mapping
 const COLORS = {
-  surface: "#E76F51", // Warm
-  mid: "#E9C46A",     // Neutral
-  bottom: "#2A9D8F",  // Cool
+  temp: "#EF476F",
+  do: "#118AB2",
 };
 
-const LINES: { key: keyof SmartFeederSensorData; label: string; color: string }[] = [
-  { key: "surfaceTemp", label: "Suhu Permukaan", color: COLORS.surface },
-  { key: "midTemp", label: "Suhu Tengah", color: COLORS.mid },
-  { key: "bottomTemp", label: "Suhu Dasar", color: COLORS.bottom },
+const LINES = [
+  { key: "surfaceTemp", label: "Suhu Permukaan (°C)", color: COLORS.temp },
+  { key: "dissolvedOxygen", label: "Oksigen Terlarut (ppm)", color: COLORS.do },
 ];
 
-export function TemperatureChart({ initialData }: { initialData?: SmartFeederSensorData[] }) {
+export function CorrelationChart({ initialData }: { initialData?: SmartFeederSensorData[] }) {
   const [filter, setFilter] = useState<FilterRange>("1h");
   const [data, setData] = useState<SmartFeederSensorData[]>(initialData || []);
   const [loading, setLoading] = useState(!initialData);
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
     surfaceTemp: true,
-    midTemp: true,
-    bottomTemp: true,
+    dissolvedOxygen: true,
   });
 
   const fetchData = useCallback(async (range: FilterRange) => {
@@ -52,9 +48,6 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
   }, []);
 
   useEffect(() => {
-    // Only fetch if it's not the initial load or if initialData wasn't provided for this range
-    // For simplicity, we just fetch on filter change if it's not the default "1h"
-    // Since page load passes default data
     if (filter !== "1h" || !initialData) {
       fetchData(filter);
     } else {
@@ -72,8 +65,7 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
   const chartData = data.map((d) => ({
     time: formatTimestamp(d.timestamp, filter),
     surfaceTemp: d.surfaceTemp,
-    midTemp: d.midTemp,
-    bottomTemp: d.bottomTemp,
+    dissolvedOxygen: d.dissolvedOxygen,
   }));
 
   const CustomLegend = () => {
@@ -84,7 +76,7 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
           return (
             <button
               key={line.key}
-              onClick={() => toggleLine(line.key as string)}
+              onClick={() => toggleLine(line.key)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all min-h-[44px]"
               style={{
                 borderColor: isActive ? line.color : "transparent",
@@ -120,7 +112,7 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={280}>
-          <LineChart data={chartData} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
+          <LineChart data={chartData} margin={{ top: 8, right: 0, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(16,42,67,0.08)" vertical={false} />
             <XAxis
               dataKey="time"
@@ -131,6 +123,15 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
               minTickGap={20}
             />
             <YAxis
+              yAxisId="left"
+              domain={["auto", "auto"]}
+              tick={{ fontSize: 11, fill: "rgba(16,42,67,0.5)", fontWeight: 500 }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
               domain={["auto", "auto"]}
               tick={{ fontSize: 11, fill: "rgba(16,42,67,0.5)", fontWeight: 500 }}
               tickLine={false}
@@ -147,23 +148,32 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
               labelStyle={{ fontSize: "11px", fontWeight: 700, color: "rgba(16,42,67,0.5)", marginBottom: "4px", textTransform: "uppercase" }}
             />
             <Legend content={<CustomLegend />} />
-            {LINES.map((line) => (
-              <Line
-                key={line.key}
-                type="monotone"
-                dataKey={line.key}
-                name={line.label}
-                stroke={line.color}
-                strokeWidth={3}
-                dot={false}
-                hide={!visibleLines[line.key]}
-                activeDot={{ r: 6, strokeWidth: 0, fill: line.color }}
-              />
-            ))}
+            
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="surfaceTemp"
+              name="Suhu Permukaan (°C)"
+              stroke={COLORS.temp}
+              strokeWidth={3}
+              dot={false}
+              hide={!visibleLines.surfaceTemp}
+              activeDot={{ r: 6, strokeWidth: 0, fill: COLORS.temp }}
+            />
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="dissolvedOxygen"
+              name="Oksigen Terlarut (ppm)"
+              stroke={COLORS.do}
+              strokeWidth={3}
+              dot={false}
+              hide={!visibleLines.dissolvedOxygen}
+              activeDot={{ r: 6, strokeWidth: 0, fill: COLORS.do }}
+            />
           </LineChart>
         </ResponsiveContainer>
       )}
     </div>
   );
 }
-

@@ -10,32 +10,26 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  ReferenceLine,
 } from "recharts";
 import type { SmartFeederSensorData, FilterRange, ApiDataResponse } from "@/types";
 import { ChartFilter } from "./ChartFilter";
 import { formatTimestamp } from "@/lib/format";
 
-// Shared color mapping
 const COLORS = {
-  surface: "#E76F51", // Warm
-  mid: "#E9C46A",     // Neutral
-  bottom: "#2A9D8F",  // Cool
+  ph: "#9D4EDD",
 };
 
-const LINES: { key: keyof SmartFeederSensorData; label: string; color: string }[] = [
-  { key: "surfaceTemp", label: "Suhu Permukaan", color: COLORS.surface },
-  { key: "midTemp", label: "Suhu Tengah", color: COLORS.mid },
-  { key: "bottomTemp", label: "Suhu Dasar", color: COLORS.bottom },
+const LINES = [
+  { key: "ph", label: "pH Air", color: COLORS.ph },
 ];
 
-export function TemperatureChart({ initialData }: { initialData?: SmartFeederSensorData[] }) {
+export function PhChart({ initialData }: { initialData?: SmartFeederSensorData[] }) {
   const [filter, setFilter] = useState<FilterRange>("1h");
   const [data, setData] = useState<SmartFeederSensorData[]>(initialData || []);
   const [loading, setLoading] = useState(!initialData);
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
-    surfaceTemp: true,
-    midTemp: true,
-    bottomTemp: true,
+    ph: true,
   });
 
   const fetchData = useCallback(async (range: FilterRange) => {
@@ -52,9 +46,6 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
   }, []);
 
   useEffect(() => {
-    // Only fetch if it's not the initial load or if initialData wasn't provided for this range
-    // For simplicity, we just fetch on filter change if it's not the default "1h"
-    // Since page load passes default data
     if (filter !== "1h" || !initialData) {
       fetchData(filter);
     } else {
@@ -71,9 +62,7 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
 
   const chartData = data.map((d) => ({
     time: formatTimestamp(d.timestamp, filter),
-    surfaceTemp: d.surfaceTemp,
-    midTemp: d.midTemp,
-    bottomTemp: d.bottomTemp,
+    ph: d.ph,
   }));
 
   const CustomLegend = () => {
@@ -84,7 +73,7 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
           return (
             <button
               key={line.key}
-              onClick={() => toggleLine(line.key as string)}
+              onClick={() => toggleLine(line.key)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all min-h-[44px]"
               style={{
                 borderColor: isActive ? line.color : "transparent",
@@ -131,7 +120,7 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
               minTickGap={20}
             />
             <YAxis
-              domain={["auto", "auto"]}
+              domain={[0, 14]}
               tick={{ fontSize: 11, fill: "rgba(16,42,67,0.5)", fontWeight: 500 }}
               tickLine={false}
               axisLine={false}
@@ -147,23 +136,23 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
               labelStyle={{ fontSize: "11px", fontWeight: 700, color: "rgba(16,42,67,0.5)", marginBottom: "4px", textTransform: "uppercase" }}
             />
             <Legend content={<CustomLegend />} />
-            {LINES.map((line) => (
-              <Line
-                key={line.key}
-                type="monotone"
-                dataKey={line.key}
-                name={line.label}
-                stroke={line.color}
-                strokeWidth={3}
-                dot={false}
-                hide={!visibleLines[line.key]}
-                activeDot={{ r: 6, strokeWidth: 0, fill: line.color }}
-              />
-            ))}
+            
+            <ReferenceLine y={6.5} stroke="#E76F51" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: 'Batas Bawah (6.5)', fill: '#E76F51', fontSize: 10 }} />
+            <ReferenceLine y={8.5} stroke="#E76F51" strokeDasharray="3 3" label={{ position: 'insideBottomLeft', value: 'Batas Atas (8.5)', fill: '#E76F51', fontSize: 10 }} />
+            
+            <Line
+              type="monotone"
+              dataKey="ph"
+              name="pH Air"
+              stroke={COLORS.ph}
+              strokeWidth={3}
+              dot={false}
+              hide={!visibleLines.ph}
+              activeDot={{ r: 6, strokeWidth: 0, fill: COLORS.ph }}
+            />
           </LineChart>
         </ResponsiveContainer>
       )}
     </div>
   );
 }
-

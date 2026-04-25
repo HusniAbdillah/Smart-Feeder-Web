@@ -49,8 +49,11 @@ export interface WQIResult {
   tempScore: number;
 }
 
+export type FilterRange = "1h" | "1d" | "1w" | "1m" | "all";
+
 export interface ApiDataResponse {
   latest: SmartFeederSensorData;
   history: SmartFeederSensorData[];
+  trends?: Partial<Record<keyof SmartFeederSensorData, number>>;
   fetchedAt: string;
 }

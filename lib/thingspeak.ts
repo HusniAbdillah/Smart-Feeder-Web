@@ -32,10 +32,10 @@ function emptyResponse(): ApiDataResponse {
   return { latest: FALLBACK, history: [], fetchedAt: new Date().toISOString() };
 }
 
-export async function fetchThingSpeakFeeds(): Promise<ApiDataResponse> {
+export async function fetchThingSpeakFeeds(range: string = "1h"): Promise<ApiDataResponse> {
   "use cache";
   cacheLife({ stale: 0, revalidate: 20, expire: 120 });
-  cacheTag("thingspeak-data");
+  cacheTag(`thingspeak-data-${range}`);
 
   const channelId = process.env.THINGSPEAK_CHANNEL_ID;
   const apiKey = process.env.THINGSPEAK_READ_API_KEY;
@@ -45,7 +45,21 @@ export async function fetchThingSpeakFeeds(): Promise<ApiDataResponse> {
   }
 
   try {
-    const url = `https://api.thingspeak.com/channels/${channelId}/feeds.json?api_key=${apiKey}&results=20`;
+    let timeParam = "minutes=60"; // default 1h
+    if (range === "1d") timeParam = "days=1";
+    else if (range === "1w") timeParam = "days=7";
+    else if (range === "1m") timeParam = "days=30";
+    else if (range === "all") timeParam = "results=8000";
+    else if (range === "1h") timeParam = "minutes=60";
+
+    // For trends, we need at least 1 hour of data.
+    // If range is e.g. "1h", it naturally includes the last hour.
+    // If it's something else, it will have more data.
+    
+    // We always want to calculate 1-hour trend, so if range is too small (e.g. we only fetch last 5 mins),
+    // we wouldn't have 1 hour ago data. But we don't have smaller ranges than 1h.
+    
+    const url = `https://api.thingspeak.com/channels/${channelId}/feeds.json?api_key=${apiKey}&${timeParam}`;
 
     const res = await fetch(url);
 
@@ -59,7 +73,36 @@ export async function fetchThingSpeakFeeds(): Promise<ApiDataResponse> {
     const history = feeds.map(parseFeed);
     const latest = history.at(-1) ?? FALLBACK;
 
-    return { latest, history, fetchedAt: new Date().toISOString() };
+    // Calculate trends (vs 1 hour ago)
+    let trends: Partial<Record<keyof SmartFeederSensorData, number>> | undefined = undefined;
+    
+    if (history.length > 1) {
+      const oneHourAgoTime = new Date(latest.timestamp).getTime() - 60 * 60 * 1000;
+      let closest = history[0];
+      let minDiff = Infinity;
+      
+      for (const item of history) {
+        const diff = Math.abs(new Date(item.timestamp).getTime() - oneHourAgoTime);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = item;
+        }
+      }
+      
+      // Calculate diff only if we found a point within 2 hours of target
+      if (closest && minDiff <= 2 * 60 * 60 * 1000) {
+        trends = {
+          surfaceTemp: latest.surfaceTemp - closest.surfaceTemp,
+          midTemp: latest.midTemp - closest.midTemp,
+          bottomTemp: latest.bottomTemp - closest.bottomTemp,
+          dissolvedOxygen: latest.dissolvedOxygen - closest.dissolvedOxygen,
+          ph: latest.ph - closest.ph,
+          depth: latest.depth - closest.depth,
+        };
+      }
+    }
+
+    return { latest, history, trends, fetchedAt: new Date().toISOString() };
   } catch {
     return emptyResponse();
   }

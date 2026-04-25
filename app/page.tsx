@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Image from "next/image";
 import { ThermometerSimple } from "@phosphor-icons/react/dist/ssr/ThermometerSimple";
 import { Thermometer } from "@phosphor-icons/react/dist/ssr/Thermometer";
 import { ThermometerCold } from "@phosphor-icons/react/dist/ssr/ThermometerCold";
@@ -16,9 +17,15 @@ import {
 } from "@/lib/wqi-calculator";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SensorCard } from "@/components/dashboard/SensorCard";
+import { ExportControls } from "@/components/dashboard/ExportControls";
 import { TemperatureChart } from "@/components/charts/TemperatureChart";
+import { CorrelationChart } from "@/components/charts/CorrelationChart";
+import { PhChart } from "@/components/charts/PhChart";
 import { cn } from "@/lib/utils";
 import type { ApiDataResponse, WQIStatus } from "@/types";
+
+// Note: Assuming logo.png is present in app directory
+import logoImg from "./logo.png";
 
 const WQI_HERO_STYLE: Record<WQIStatus, string> = {
   safe: "border-status-safe bg-status-safe/10",
@@ -30,7 +37,8 @@ async function DashboardContent() {
   let result: ApiDataResponse | null = null;
 
   try {
-    result = await fetchThingSpeakFeeds();
+    // Top grid always uses 1h default
+    result = await fetchThingSpeakFeeds("1h");
   } catch {
   }
 
@@ -48,7 +56,7 @@ async function DashboardContent() {
   }
 
 
-  const { latest, history } = result;
+  const { latest, history, trends, fetchedAt } = result;
   const wqi = calculateWQI(latest);
   const insight = generateInsights(latest);
 
@@ -66,12 +74,29 @@ async function DashboardContent() {
     { label: "Suhu", score: wqi.tempScore },
   ];
 
+  const updatedAt = new Intl.DateTimeFormat("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+    timeZone: "Asia/Jakarta"
+  }).format(new Date(fetchedAt));
+
   return (
     <div className="space-y-8">
+      {/* Controls: Export & Timestamp */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4 mb-4">
+        <div className="flex items-center gap-4 justify-between sm:justify-end w-full">
+          <div className="text-sm font-medium text-text-main/50 whitespace-nowrap">
+            Terakhir diperbarui: {updatedAt}
+          </div>
+          <ExportControls data={history} />
+        </div>
+      </div>
+
       {/* WQI Hero */}
       <section
         className={cn(
-          "rounded-3xl border-2 p-8 shadow-sm",
+          "rounded-3xl border-2 p-6 sm:p-8 shadow-sm",
           WQI_HERO_STYLE[wqi.status],
         )}
       >
@@ -95,11 +120,11 @@ async function DashboardContent() {
           </div>
 
           {/* Sub-scores panel */}
-          <div className="flex gap-8 lg:flex-col lg:items-end lg:gap-4">
+          <div className="flex flex-wrap gap-4 lg:flex-col lg:items-end sm:gap-8">
             {subScores.map(({ label, score }) => (
               <div
                 key={label}
-                className="flex flex-col items-start gap-0.5 lg:items-end"
+                className="flex flex-col items-start gap-0.5 lg:items-end w-[calc(50%-8px)] sm:w-auto"
               >
                 <span className="text-xs font-medium text-text-main/45">
                   {label}
@@ -114,7 +139,7 @@ async function DashboardContent() {
 
         {/* Actionable insight */}
         <div className="mt-6 border-t border-text-main/10 pt-5 space-y-4">
-          <p className="text-base font-medium leading-relaxed text-text-main/75">
+          <p className="text-sm sm:text-base font-medium leading-relaxed text-text-main/75">
             {insight}
           </p>
           <div
@@ -136,7 +161,7 @@ async function DashboardContent() {
 
       {/* ── Sensor Grid ──────────────────────────────────────── */}
       <section>
-        <h2 className="mb-5 text-xl font-bold text-text-main">
+        <h2 className="mb-4 text-lg sm:text-xl font-bold text-text-main px-1">
           Data Sensor Terkini
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -146,6 +171,7 @@ async function DashboardContent() {
             unit="°C"
             icon={<ThermometerSimple size={32} weight="fill" />}
             status={getTemperatureStatus(latest.surfaceTemp)}
+            trend={trends?.surfaceTemp}
           />
           <SensorCard
             title="Suhu Tengah"
@@ -153,6 +179,7 @@ async function DashboardContent() {
             unit="°C"
             icon={<Thermometer size={32} weight="fill" />}
             status={getTemperatureStatus(latest.midTemp)}
+            trend={trends?.midTemp}
           />
           <SensorCard
             title="Suhu Dasar"
@@ -160,6 +187,7 @@ async function DashboardContent() {
             unit="°C"
             icon={<ThermometerCold size={32} weight="fill" />}
             status={getTemperatureStatus(latest.bottomTemp)}
+            trend={trends?.bottomTemp}
           />
           <SensorCard
             title="Oksigen Terlarut (DO)"
@@ -167,6 +195,7 @@ async function DashboardContent() {
             unit="ppm"
             icon={<Drop size={32} weight="fill" />}
             status={getDOStatus(latest.dissolvedOxygen)}
+            trend={trends?.dissolvedOxygen}
           />
           <SensorCard
             title="pH Air"
@@ -174,6 +203,7 @@ async function DashboardContent() {
             unit=""
             icon={<TestTube size={32} weight="fill" />}
             status={getPhStatus(latest.ph)}
+            trend={trends?.ph}
           />
           <SensorCard
             title="Kedalaman"
@@ -181,17 +211,38 @@ async function DashboardContent() {
             unit="m"
             icon={<Ruler size={32} weight="fill" />}
             status="safe"
+            trend={trends?.depth}
           />
         </div>
       </section>
 
-      {/* ── Historical Chart ─────────────────────────────────── */}
-      <section>
-        <h2 className="mb-5 text-xl font-bold text-text-main">
-          Analisis Stratifikasi Suhu
-        </h2>
-        <div className="rounded-2xl bg-surface p-6 shadow-sm">
-          <TemperatureChart data={history} />
+      {/* ── Historical Charts ─────────────────────────────────── */}
+      <section className="space-y-6">
+        <div>
+          <h2 className="mb-4 text-lg sm:text-xl font-bold text-text-main px-1">
+            Analisis Stratifikasi Suhu
+          </h2>
+          <div className="rounded-2xl bg-surface p-4 sm:p-6 shadow-sm overflow-hidden">
+            <TemperatureChart initialData={history} />
+          </div>
+        </div>
+        
+        <div>
+          <h2 className="mb-4 text-lg sm:text-xl font-bold text-text-main px-1">
+            Korelasi Suhu & Oksigen (DO)
+          </h2>
+          <div className="rounded-2xl bg-surface p-4 sm:p-6 shadow-sm overflow-hidden">
+            <CorrelationChart initialData={history} />
+          </div>
+        </div>
+
+        <div>
+          <h2 className="mb-4 text-lg sm:text-xl font-bold text-text-main px-1">
+            Tren pH Air
+          </h2>
+          <div className="rounded-2xl bg-surface p-4 sm:p-6 shadow-sm overflow-hidden">
+            <PhChart initialData={history} />
+          </div>
         </div>
       </section>
     </div>
@@ -202,11 +253,19 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-black tracking-tight text-primary sm:text-4xl">
-            Dashboard Smart Feeder
+        <header className="mb-10 flex flex-col items-center justify-center text-center">
+          <Image 
+            src={logoImg} 
+            alt="Smart Feeder Logo" 
+            width={72} 
+            height={72} 
+            className="mb-3 drop-shadow-sm rounded-full sm:w-20 sm:h-20"
+            priority
+          />
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-primary">
+            Smart Feeder
           </h1>
-          <p className="mt-1.5 text-base text-text-main/60">
+          <p className="mt-1.5 text-xs sm:text-sm font-medium uppercase tracking-widest text-text-main/60">
             Pemantauan Kualitas Air Real-time
           </p>
         </header>
