@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -26,16 +26,28 @@ export function OxygenChart({ initialData }: { initialData?: SmartFeederSensorDa
   const [filter, setFilter] = useState<FilterRange>("1h");
   const [data, setData] = useState<SmartFeederSensorData[]>(initialData || []);
   const [loading, setLoading] = useState(!initialData);
+  const rangeCache = useRef<Partial<Record<FilterRange, SmartFeederSensorData[]>>>(
+    initialData ? { "1h": initialData } : {},
+  );
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
     dissolvedOxygen: true,
   });
 
   const fetchData = useCallback(async (range: FilterRange) => {
+    const cached = rangeCache.current[range];
+    if (cached) {
+      setData(cached);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch(`/api/thingspeak?range=${range}`);
       const json: ApiDataResponse = await res.json();
-      setData(json.history || []);
+      const nextHistory = json.history || [];
+      rangeCache.current[range] = nextHistory;
+      setData(nextHistory);
     } finally {
       setLoading(false);
     }
@@ -45,6 +57,7 @@ export function OxygenChart({ initialData }: { initialData?: SmartFeederSensorDa
     if (filter !== "1h" || !initialData) {
       fetchData(filter);
     } else {
+      rangeCache.current["1h"] = initialData;
       setData(initialData);
     }
   }, [filter, fetchData, initialData]);
