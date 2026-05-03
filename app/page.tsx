@@ -15,23 +15,13 @@ import {
   getDOStatus,
   getPhStatus,
 } from "@/lib/wqi-calculator";
+import { AutoRefresh } from "@/components/dashboard/AutoRefresh";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SensorCard } from "@/components/dashboard/SensorCard";
 import { ExportControls } from "@/components/dashboard/ExportControls";
-import dynamic from "next/dynamic";
-
-const TemperatureChart = dynamic(() => import("@/components/charts/TemperatureChart").then(mod => mod.TemperatureChart), {
-  ssr: false,
-  loading: () => <div className="h-72 w-full animate-pulse bg-text-main/5 rounded-xl" />
-});
-const CorrelationChart = dynamic(() => import("@/components/charts/CorrelationChart").then(mod => mod.CorrelationChart), {
-  ssr: false,
-  loading: () => <div className="h-72 w-full animate-pulse bg-text-main/5 rounded-xl" />
-});
-const PhChart = dynamic(() => import("@/components/charts/PhChart").then(mod => mod.PhChart), {
-  ssr: false,
-  loading: () => <div className="h-72 w-full animate-pulse bg-text-main/5 rounded-xl" />
-});
+import { TemperatureChart } from "@/components/charts/TemperatureChart";
+import { CorrelationChart } from "@/components/charts/CorrelationChart";
+import { PhChart } from "@/components/charts/PhChart";
 import { cn } from "@/lib/utils";
 import type { ApiDataResponse, WQIStatus } from "@/types";
 
@@ -47,7 +37,7 @@ async function DashboardContent() {
   let result: ApiDataResponse | null = null;
 
   try {
-    result = await fetchThingSpeakFeeds("1h");
+    result = await fetchThingSpeakFeeds("all");
   } catch {
   }
 
@@ -81,6 +71,21 @@ async function DashboardContent() {
     { label: "Oksigen Terlarut", score: wqi.doScore },
     { label: "pH Air", score: wqi.phScore },
     { label: "Suhu", score: wqi.tempScore },
+  ];
+
+  const latestTimestamp = new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Jakarta",
+  }).format(new Date(latest.timestamp));
+
+  const latestReadings = [
+    { label: "Suhu Permukaan", value: `${latest.surfaceTemp.toFixed(1)} °C` },
+    { label: "Suhu Tengah", value: `${latest.midTemp.toFixed(1)} °C` },
+    { label: "Suhu Dasar", value: `${latest.bottomTemp.toFixed(1)} °C` },
+    { label: "Oksigen Terlarut", value: `${latest.dissolvedOxygen.toFixed(1)} ppm` },
+    { label: "pH Air", value: latest.ph.toFixed(1) },
+    { label: "Kedalaman", value: `${latest.depth.toFixed(2)} m` },
   ];
 
   const updatedAt = new Intl.DateTimeFormat("id-ID", {
@@ -249,6 +254,56 @@ async function DashboardContent() {
         </div>
       </section>
 
+      <details className="rounded-3xl border border-text-main/8 bg-surface shadow-sm open:shadow-md">
+        <summary className="cursor-pointer list-none px-5 py-4 sm:px-6 sm:py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-text-main/45">
+                Data Terakhir Terkirim Sensor
+              </p>
+              <h2 className="mt-1 text-lg sm:text-xl font-black text-text-main">
+                Lihat data terakhir dari ThingSpeak
+              </h2>
+            </div>
+            <div className="text-right">
+              <span className="block text-[11px] font-bold uppercase tracking-wider text-text-main/45">
+                Total Sampel
+              </span>
+              <span className="mt-1 block text-base font-semibold text-text-main">
+                {history.length}
+              </span>
+            </div>
+          </div>
+        </summary>
+
+        <div className="px-5 pb-5 sm:px-6 sm:pb-6">
+          <div className="rounded-2xl border border-text-main/8 bg-background px-4 py-3 text-sm text-text-main/70 shadow-sm">
+            <span className="block text-[11px] font-bold uppercase tracking-wider text-text-main/45">
+              Update terakhir diterima
+            </span>
+            <span className="mt-1 block text-base font-semibold text-text-main">
+              {latestTimestamp}
+            </span>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {latestReadings.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-2xl border border-text-main/8 bg-background px-4 py-3"
+              >
+                <p className="text-[11px] font-bold uppercase tracking-wider text-text-main/45">
+                  {item.label}
+                </p>
+                <p className="mt-1 text-lg font-black text-text-main">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </details>
+
       {/* ── Historical Charts ─────────────────────────────────── */}
       <section className="space-y-6">
         <div>
@@ -281,8 +336,6 @@ async function DashboardContent() {
     </div>
   );
 }
-
-import { AutoRefresh } from "@/components/dashboard/AutoRefresh";
 
 export default function Page() {
   return (

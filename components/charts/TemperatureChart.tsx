@@ -28,7 +28,7 @@ const LINES: { key: keyof SmartFeederSensorData; label: string; color: string }[
 ];
 
 export function TemperatureChart({ initialData }: { initialData?: SmartFeederSensorData[] }) {
-  const [filter, setFilter] = useState<FilterRange>("1h");
+  const [filter, setFilter] = useState<FilterRange>("all");
   const [data, setData] = useState<SmartFeederSensorData[]>(initialData || []);
   const [loading, setLoading] = useState(!initialData);
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
@@ -51,7 +51,7 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
   }, []);
 
   useEffect(() => {
-    if (filter !== "1h" || !initialData) {
+    if (filter !== "all" || !initialData) {
       fetchData(filter);
     } else {
       setData(initialData);
