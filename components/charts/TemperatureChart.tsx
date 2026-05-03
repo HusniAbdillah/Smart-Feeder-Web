@@ -10,25 +10,26 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  ReferenceLine,
 } from "recharts";
 import type { SmartFeederSensorData, FilterRange, ApiDataResponse } from "@/types";
 import { ChartFilter } from "./ChartFilter";
 import { formatTimestamp } from "@/lib/format";
 
 const COLORS = {
-  surface: "#E76F51", // Warm
-  mid: "#E9C46A",     // Neutral
-  bottom: "#2A9D8F",  // Cool
+  surface: "#0EA5E9",
+  mid: "#2563EB",
+  bottom: "#14B8A6",
 };
 
 const LINES: { key: keyof SmartFeederSensorData; label: string; color: string }[] = [
   { key: "surfaceTemp", label: "Suhu Permukaan (°C)", color: COLORS.surface },
-  { key: "midTemp",   label: "Suhu Tengah (°C)", color: COLORS.mid },
+  { key: "midTemp",   label: "Suhu Kolom (°C)", color: COLORS.mid },
   { key: "bottomTemp", label: "Suhu Dasar (°C)", color: COLORS.bottom },
 ];
 
 export function TemperatureChart({ initialData }: { initialData?: SmartFeederSensorData[] }) {
-  const [filter, setFilter] = useState<FilterRange>("all");
+  const [filter, setFilter] = useState<FilterRange>("1h");
   const [data, setData] = useState<SmartFeederSensorData[]>(initialData || []);
   const [loading, setLoading] = useState(!initialData);
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
@@ -51,7 +52,7 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
   }, []);
 
   useEffect(() => {
-    if (filter !== "all" || !initialData) {
+    if (filter !== "1h" || !initialData) {
       fetchData(filter);
     } else {
       setData(initialData);
@@ -71,6 +72,35 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
     midTemp: d.midTemp,
     bottomTemp: d.bottomTemp,
   }));
+
+  const TemperatureLegend = () => (
+    <div className="flex flex-wrap justify-center gap-2 pt-4">
+      {LINES.map((line) => {
+        const isActive = visibleLines[line.key];
+
+        return (
+          <button
+            key={line.key}
+            onClick={() => toggleLine(line.key as string)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all min-h-[44px]"
+            style={{
+              borderColor: isActive ? line.color : "transparent",
+              backgroundColor: isActive ? `${line.color}15` : "rgba(16,42,67,0.05)",
+              opacity: isActive ? 1 : 0.5,
+            }}
+          >
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: line.color }}
+            />
+            <span className="text-xs font-semibold text-text-main">
+              {line.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
 
   const CustomLegend = () => {
     return (
@@ -142,7 +172,10 @@ export function TemperatureChart({ initialData }: { initialData?: SmartFeederSen
               itemStyle={{ fontSize: "13px", fontWeight: 600, padding: "2px 0" }}
               labelStyle={{ fontSize: "11px", fontWeight: 700, color: "rgba(16,42,67,0.5)", marginBottom: "4px", textTransform: "uppercase" }}
             />
-            <Legend content={<CustomLegend />} />
+            <Legend content={<TemperatureLegend />} />
+
+            <ReferenceLine y={26} stroke="#0EA5E9" strokeDasharray="3 3" label={{ position: "insideTopLeft", value: "Ideal 26°C", fill: "#0EA5E9", fontSize: 10 }} />
+            <ReferenceLine y={32} stroke="#0EA5E9" strokeDasharray="3 3" label={{ position: "insideBottomLeft", value: "Ideal 32°C", fill: "#0EA5E9", fontSize: 10 }} />
             {LINES.map((line) => (
               <Line
                 key={line.key}
