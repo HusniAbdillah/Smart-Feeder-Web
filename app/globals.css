@@ -20,3 +20,58 @@ body {
     color: #102a43;
     font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+@keyframes loading-drift {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(18px, 10px, 0) scale(1.08); }
+}
+
+@keyframes loading-float {
+    0%, 100% { transform: translate3d(-50%, 0, 0) scale(1); }
+    50% { transform: translate3d(-50%, -14px, 0) scale(1.06); }
+}
+
+@keyframes loading-pulse {
+    0%, 100% { opacity: 0.55; transform: scale(0.92); }
+    50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes loading-dot {
+    0%, 100% { transform: scale(0.75); opacity: 0.35; }
+    50% { transform: scale(1.12); opacity: 1; }
+}
+
+@keyframes loading-shift {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+.loading-drift {
+    animation: loading-drift 6.5s ease-in-out infinite;
+}
+
+.loading-drift-slow {
+    animation: loading-drift 8.5s ease-in-out infinite reverse;
+}
+
+.loading-float {
+    animation: loading-float 5.5s ease-in-out infinite;
+}
+
+.loading-pulse {
+    animation: loading-pulse 2.8s ease-in-out infinite;
+}
+
+.loading-dot {
+    animation: loading-dot 1.8s ease-in-out infinite;
+}
+
+.loading-delay-1 { animation-delay: 0.1s; }
+.loading-delay-2 { animation-delay: 0.2s; }
+.loading-delay-3 { animation-delay: 0.3s; }
+.loading-delay-4 { animation-delay: 0.4s; }
+.loading-delay-5 { animation-delay: 0.5s; }
+
+.loading-shift {
+    animation: loading-shift 2.6s ease-in-out infinite;
+}

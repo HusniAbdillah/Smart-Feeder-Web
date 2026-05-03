@@ -58,6 +58,19 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
+function normalizedDistance(value: number, min: number, max: number): number {
+  if (value >= min && value <= max) {
+    return 0;
+  }
+
+  const span = max - min;
+  if (value < min) {
+    return (min - value) / span;
+  }
+
+  return (value - max) / span;
+}
+
 
 /**
  * Calculates Water Quality Index (WQI) for aquaculture.
@@ -103,46 +116,54 @@ export function calculateWQI(data: SmartFeederSensorData): WQIResult {
 /**
  * Generate insight string based on the worst parameter (DO, pH, or Temp).
  */
-export function generateInsights(data: SmartFeederSensorData): string {
+export function getRecommendation(data: SmartFeederSensorData): string {
   const tempAvg = (data.surfaceTemp + 2 * data.midTemp + data.bottomTemp) / 4;
 
-  const scores = [
-    { param: "do" as const, score: calcDOScore(data.dissolvedOxygen) },
-    { param: "ph" as const, score: calcPhScore(data.ph) },
-    { param: "temp" as const, score: calcTempScore(tempAvg) },
+  const priorities = [
+    { param: "temp" as const, severity: normalizedDistance(tempAvg, 26, 32) },
+    { param: "ph" as const, severity: normalizedDistance(data.ph, 7.0, 8.5) },
+    { param: "do" as const, severity: normalizedDistance(data.dissolvedOxygen, 4, 6) },
   ];
 
-  const worst = scores.reduce((a, b) => (a.score <= b.score ? a : b));
+  const worst = priorities.reduce((a, b) => (a.severity >= b.severity ? a : b));
 
   switch (worst.param) {
-    case "do": {
-      const val = data.dissolvedOxygen.toFixed(1);
-      if (worst.score >= 80)
-        return `Kadar Oksigen Terlarut (DO) berada dalam kondisi baik (${val} ppm). Pertahankan sirkulasi udara yang ada.`;
-      if (worst.score < 40)
-        return `Kadar Oksigen Terlarut (DO) berada di tingkat kritis (${val} ppm). Segera nyalakan aerator atau kincir air untuk mencegah kematian massal.`;
-      return `Kadar Oksigen Terlarut (DO) berada di tingkat waspada (${val} ppm). Nyalakan aerator tambahan dan kurangi pemberian pakan.`;
+    case "temp": {
+      const val = tempAvg.toFixed(1);
+      if (tempAvg >= 26 && tempAvg <= 32) {
+        return `Suhu rata-rata air berada dalam rentang baik (${val} C).`;
+      }
+      if (tempAvg > 32) {
+        return `Suhu rata-rata air terlalu tinggi (${val} C). Lakukan pendinginan pada air tambak/masukkan sumber air dingin ke dalam tambak!`;
+      }
+      return `Suhu rata-rata air terlalu rendah (${val} C). Lakukan pemanasan pada air tambak/masukkan sumber air panas ke dalam tambak!`;
     }
 
     case "ph": {
       const val = data.ph.toFixed(1);
-      if (worst.score >= 80)
-        return `Tingkat pH air berada dalam rentang ideal (${val}). Pertahankan pengelolaan kualitas air yang baik.`;
-      if (data.ph < 6.5)
-        return `Tingkat pH air terlalu asam (${val}). Tambahkan kapur pertanian (dolomit) untuk menaikkan pH ke rentang 7,5 hingga 8,5.`;
-      return `Tingkat pH air terlalu basa (${val}). Lakukan penggantian air sebagian dan periksa sumber air masuk.`;
+      if (data.ph >= 7.0 && data.ph <= 8.5) {
+        return `Keasaman (pH) air berada dalam rentang baik (${val}).`;
+      }
+      if (data.ph > 8.5) {
+        return `Air terlalu asam (pH tinggi) (${val}). Segera ganti air tambak anda!`;
+      }
+      return `Air terlalu basa (pH rendah) (${val}). Lakukan pengapuran/pembersihan sisa pakan udang!`;
     }
 
-    case "temp": {
-      const val = tempAvg.toFixed(1);
-      if (worst.score >= 80)
-        return `Suhu rata-rata air berada dalam rentang ideal (${val} C). Pertahankan pengelolaan suhu yang ada.`;
-      if (tempAvg < 28)
-        return `Suhu rata-rata air terlalu rendah (${val} C). Periksa sistem pemanas dan kurangi debit air masuk dari sumber yang lebih dingin.`;
-      return `Suhu rata-rata air terlalu tinggi (${val} C). Tambahkan naungan pada kolam dan tingkatkan sirkulasi air untuk menurunkan suhu.`;
+    case "do": {
+      const val = data.dissolvedOxygen.toFixed(1);
+      if (data.dissolvedOxygen >= 4 && data.dissolvedOxygen <= 6) {
+        return `Kadar oksigen berada dalam kondisi baik (${val} ppm).`;
+      }
+      if (data.dissolvedOxygen > 6) {
+        return `Kadar oksigen terlalu tinggi (${val} ppm). Kurangi kecepatan aerator/kincir air!`;
+      }
+      return `Kadar oksigen terlalu rendah (${val} ppm). Nyalakan/tingkatkan kecepatan aerator/kincir air!`;
     }
   }
 }
+
+export const generateInsights = getRecommendation;
 /**
  * Utility: Check for temperature stratification (difference between layers).
  * If delta > threshold (e.g. 2°C), flag for aeration.
@@ -159,19 +180,19 @@ export function checkStratification(
 }
 
 export function getTemperatureStatus(tempC: number): WQIStatus {
-  if (tempC >= 28 && tempC <= 32) return "safe";
-  if (tempC < 25 || tempC > 35) return "critical";
+  if (tempC >= 26 && tempC <= 32) return "safe";
+  if (tempC < 24 || tempC > 34) return "critical";
   return "warning";
 }
 
 export function getDOStatus(do_ppm: number): WQIStatus {
-  if (do_ppm >= 5) return "safe";
-  if (do_ppm < 3) return "critical";
+  if (do_ppm >= 4 && do_ppm <= 6) return "safe";
+  if (do_ppm < 3 || do_ppm > 7) return "critical";
   return "warning";
 }
 
 export function getPhStatus(ph: number): WQIStatus {
-  if (ph >= 7.5 && ph <= 8.5) return "safe";
+  if (ph >= 7.0 && ph <= 8.5) return "safe";
   if (ph < 6.5 || ph > 9.0) return "critical";
   return "warning";
 }

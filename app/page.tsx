@@ -10,18 +10,22 @@ import { Ruler } from "@phosphor-icons/react/dist/ssr/Ruler";
 import { fetchThingSpeakFeeds } from "@/lib/thingspeak";
 import {
   calculateWQI,
-  generateInsights,
+  getRecommendation,
   getTemperatureStatus,
   getDOStatus,
   getPhStatus,
+  getStratificationStatus,
 } from "@/lib/wqi-calculator";
 import { AutoRefresh } from "@/components/dashboard/AutoRefresh";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { SensorCard } from "@/components/dashboard/SensorCard";
 import { ExportControls } from "@/components/dashboard/ExportControls";
 import { TemperatureChart } from "@/components/charts/TemperatureChart";
-import { CorrelationChart } from "@/components/charts/CorrelationChart";
 import { PhChart } from "@/components/charts/PhChart";
+import { OxygenChart } from "@/components/charts/OxygenChart";
+import { DepthChart } from "@/components/charts/DepthChart";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { cn } from "@/lib/utils";
 import type { ApiDataResponse, WQIStatus } from "@/types";
 
@@ -37,7 +41,7 @@ async function DashboardContent() {
   let result: ApiDataResponse | null = null;
 
   try {
-    result = await fetchThingSpeakFeeds("all");
+    result = await fetchThingSpeakFeeds("1h");
   } catch {
   }
 
@@ -55,12 +59,9 @@ async function DashboardContent() {
   }
 
 
-  const { latest, history, trends, fetchedAt } = result;
+  const { latest, history, trends } = result;
   const wqi = calculateWQI(latest);
-  const insight = generateInsights(latest);
-
-  // --- Stratification analysis ---
-  const { getStratificationStatus } = await import("@/lib/wqi-calculator");
+  const insight = getRecommendation(latest);
   const strat = getStratificationStatus(
     latest.surfaceTemp,
     latest.midTemp,
@@ -79,54 +80,9 @@ async function DashboardContent() {
     timeZone: "Asia/Jakarta",
   }).format(new Date(latest.timestamp));
 
-  const latestReadings = [
-    { label: "Suhu Permukaan", value: `${latest.surfaceTemp.toFixed(1)} °C` },
-    { label: "Suhu Tengah", value: `${latest.midTemp.toFixed(1)} °C` },
-    { label: "Suhu Dasar", value: `${latest.bottomTemp.toFixed(1)} °C` },
-    { label: "Oksigen Terlarut", value: `${latest.dissolvedOxygen.toFixed(1)} ppm` },
-    { label: "pH Air", value: latest.ph.toFixed(1) },
-    { label: "Kedalaman", value: `${latest.depth.toFixed(2)} m` },
-  ];
-
-  const updatedAt = new Intl.DateTimeFormat("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZoneName: "short",
-    timeZone: "Asia/Jakarta"
-  }).format(new Date(fetchedAt));
-
   return (
     <div className="space-y-8">
-      {/* ── Header & Top Controls ──────────────────────────────── */}
-      <header className="flex flex-col items-center gap-6 md:flex-row md:items-start md:justify-between mb-12">
-        <div className="flex flex-col items-center text-center md:flex-row md:items-center md:text-left gap-6">
-          <div className="relative shrink-0">
-            <Image 
-              src={logoImg} 
-              alt="Smart Feeder Logo" 
-              width={120} 
-              height={120} 
-              className="drop-shadow-lg rounded-full w-20 h-20 md:w-32 md:h-32 border-4 border-surface"
-              priority
-            />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-3xl md:text-6xl font-black tracking-tight text-primary">
-              Smart Feeder
-            </h1>
-            <p className="mt-1 text-xs md:text-xl font-bold text-text-main/60">
-              Pemantauan Kualitas Air Real-time Berbasis IoT
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center md:items-end gap-3 pt-2">
-          <div className="text-[11px] md:text-sm font-bold uppercase tracking-wider text-text-main/60 whitespace-nowrap bg-surface px-3 py-1.5 rounded-full border border-text-main/5 shadow-sm">
-            Terakhir diperbarui: {updatedAt}
-          </div>
-          <ExportControls data={history} />
-        </div>
-      </header>
+      <Header updatedAt={latestTimestamp} actions={<ExportControls data={history} />} />
 
       {/* WQI Hero */}
       <section
@@ -212,7 +168,7 @@ async function DashboardContent() {
             trend={trends?.surfaceTemp}
           />
           <SensorCard
-            title="Suhu Tengah"
+            title="Suhu Kolom"
             value={latest.midTemp}
             unit="°C"
             icon={<Thermometer size={32} weight="fill" />}
@@ -254,61 +210,11 @@ async function DashboardContent() {
         </div>
       </section>
 
-      <details className="rounded-3xl border border-text-main/8 bg-surface shadow-sm open:shadow-md">
-        <summary className="cursor-pointer list-none px-5 py-4 sm:px-6 sm:py-5">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-text-main/45">
-                Data Terakhir Terkirim Sensor
-              </p>
-              <h2 className="mt-1 text-lg sm:text-xl font-black text-text-main">
-                Lihat data terakhir dari ThingSpeak
-              </h2>
-            </div>
-            <div className="text-right">
-              <span className="block text-[11px] font-bold uppercase tracking-wider text-text-main/45">
-                Total Sampel
-              </span>
-              <span className="mt-1 block text-base font-semibold text-text-main">
-                {history.length}
-              </span>
-            </div>
-          </div>
-        </summary>
-
-        <div className="px-5 pb-5 sm:px-6 sm:pb-6">
-          <div className="rounded-2xl border border-text-main/8 bg-background px-4 py-3 text-sm text-text-main/70 shadow-sm">
-            <span className="block text-[11px] font-bold uppercase tracking-wider text-text-main/45">
-              Update terakhir diterima
-            </span>
-            <span className="mt-1 block text-base font-semibold text-text-main">
-              {latestTimestamp}
-            </span>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {latestReadings.map((item) => (
-              <div
-                key={item.label}
-                className="rounded-2xl border border-text-main/8 bg-background px-4 py-3"
-              >
-                <p className="text-[11px] font-bold uppercase tracking-wider text-text-main/45">
-                  {item.label}
-                </p>
-                <p className="mt-1 text-lg font-black text-text-main">
-                  {item.value}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </details>
-
       {/* ── Historical Charts ─────────────────────────────────── */}
       <section className="space-y-6">
         <div>
           <h2 className="mb-4 text-lg sm:text-xl font-bold text-text-main px-1">
-            Analisis Stratifikasi Suhu
+            Tren Suhu
           </h2>
           <div className="rounded-2xl bg-surface p-4 sm:p-6 shadow-sm overflow-hidden">
             <TemperatureChart initialData={history} />
@@ -317,22 +223,33 @@ async function DashboardContent() {
         
         <div>
           <h2 className="mb-4 text-lg sm:text-xl font-bold text-text-main px-1">
-            Korelasi Suhu & Oksigen (DO)
+            Tren Oksigen
           </h2>
           <div className="rounded-2xl bg-surface p-4 sm:p-6 shadow-sm overflow-hidden">
-            <CorrelationChart initialData={history} />
+            <OxygenChart initialData={history} />
           </div>
         </div>
 
         <div>
           <h2 className="mb-4 text-lg sm:text-xl font-bold text-text-main px-1">
-            Tren pH Air
+            Tren pH
           </h2>
           <div className="rounded-2xl bg-surface p-4 sm:p-6 shadow-sm overflow-hidden">
             <PhChart initialData={history} />
           </div>
         </div>
+
+        <div>
+          <h2 className="mb-4 text-lg sm:text-xl font-bold text-text-main px-1">
+            Ketinggian Air
+          </h2>
+          <div className="rounded-2xl bg-surface p-4 sm:p-6 shadow-sm overflow-hidden">
+            <DepthChart initialData={history} />
+          </div>
+        </div>
       </section>
+
+      <Footer />
     </div>
   );
 }
@@ -344,10 +261,47 @@ export default function Page() {
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <Suspense
           fallback={
-            <div className="flex min-h-[80vh] items-center justify-center rounded-2xl bg-surface shadow-sm">
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                <p className="text-lg font-medium text-text-main/60 animate-pulse">Memuat dashboard...</p>
+            <div className="relative min-h-[80vh] overflow-hidden rounded-3xl border border-text-main/8 bg-surface shadow-sm">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(27,73,101,0.12),_transparent_42%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.18),_transparent_40%)]" />
+              <div className="absolute left-6 top-8 h-28 w-28 rounded-full bg-primary/10 blur-2xl loading-drift" />
+              <div className="absolute right-10 top-16 h-20 w-20 rounded-full bg-status-safe/20 blur-2xl loading-drift-slow" />
+              <div className="absolute bottom-10 left-1/2 h-24 w-24 -translate-x-1/2 rounded-full bg-status-warning/20 blur-2xl loading-float" />
+
+              <div className="relative flex min-h-[80vh] flex-col items-center justify-center px-6 py-10 text-center">
+                <div className="relative mb-8">
+                  <div className="absolute inset-0 rounded-full bg-primary/15 blur-xl loading-pulse" />
+                  <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-primary/15 bg-white/80 shadow-lg backdrop-blur-sm">
+                    <Image
+                      src={logoImg}
+                      alt="Smart Feeder"
+                      width={88}
+                      height={88}
+                      className="h-16 w-16 object-contain loading-pulse"
+                      priority
+                    />
+                  </div>
+                </div>
+
+                <div className="max-w-xl space-y-3">
+                  <h2 className="text-2xl font-black tracking-tight text-text-main sm:text-4xl">
+                    Memuat dashboard
+                  </h2>
+                </div>
+
+                <div className="mt-8 grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-text-main/8 bg-white/80 px-4 py-4 text-left shadow-sm backdrop-blur-sm loading-shift">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-text-main/45">Data Sensor</p>
+                    <p className="mt-2 text-sm font-semibold text-text-main/70">Membaca nilai suhu, DO, pH, dan kedalaman</p>
+                  </div>
+                  <div className="rounded-2xl border border-text-main/8 bg-white/80 px-4 py-4 text-left shadow-sm backdrop-blur-sm loading-shift loading-delay-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-text-main/45">Analitik</p>
+                    <p className="mt-2 text-sm font-semibold text-text-main/70">Menyiapkan rekomendasi dan status kualitas air</p>
+                  </div>
+                  <div className="rounded-2xl border border-text-main/8 bg-white/80 px-4 py-4 text-left shadow-sm backdrop-blur-sm loading-shift loading-delay-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-text-main/45">Grafik</p>
+                    <p className="mt-2 text-sm font-semibold text-text-main/70">Menyusun tren Oksigen, pH, Suhu, dan Ketinggian Air</p>
+                  </div>
+                </div>
               </div>
             </div>
           }
