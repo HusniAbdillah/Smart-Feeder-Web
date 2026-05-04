@@ -1,76 +1,74 @@
 import type { SmartFeederSensorData, WQIResult, WQIStatus } from "@/types";
 
-// WQI weights based on aquaculture literature:
-// DO = 0.4 (most critical), pH = 0.3, Temp = 0.3
+export const RULES = {
+  temp: { min: 26, max: 32 },
+  ph: { min: 7.0, max: 8.5 },
+  do: { min: 4, max: 6 },
+} as const;
+
+// WQI weights based on aquaculture literature
 const WEIGHTS = { do: 0.4, ph: 0.3, temp: 0.3 } as const;
+
+const MIN_SCORE = 10;
+const MAX_SCORE = 100;
+
+const FALLOFF_FACTOR = 2; // outer bounds = ideal ± span * FALLOFF_FACTOR
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
-}
-
-function lerp(
-  value: number,
-  fromMin: number,
-  fromMax: number,
-  toMin: number,
-  toMax: number,
-): number {
-  return toMin + ((value - fromMin) / (fromMax - fromMin)) * (toMax - toMin);
-}
-
-
-// Sub-index for Dissolved Oxygen (DO), mg/L
-// Q_DO = 100 if DO >= 5
-// Q_DO = 10 + 90 * (DO-3)/2 if 3 <= DO < 5
-// Q_DO = 10 if DO < 3
-function calcDOScore(do_ppm: number): number {
-  if (do_ppm >= 5) return 100;
-  if (do_ppm < 3) return 10;
-  return clamp(10 + 90 * ((do_ppm - 3) / 2), 10, 100);
-}
-
-
-// Sub-index for pH
-// Q_pH = 100 if 7.5 <= pH <= 8.5
-// Q_pH = 10 + 90 * (1 - min(|pH-7.5|, |pH-8.5|)/1.5) if 6.5 < pH < 9.0
-// Q_pH = 10 if pH <= 6.5 or pH >= 9.0
-function calcPhScore(ph: number): number {
-  if (ph >= 7.5 && ph <= 8.5) return 100;
-  if (ph <= 6.5 || ph >= 9.0) return 10;
-  // 6.5 < pH < 7.5 or 8.5 < pH < 9.0
-  const dist = Math.min(Math.abs(ph - 7.5), Math.abs(ph - 8.5));
-  return clamp(10 + 90 * (1 - dist / 1.5), 10, 100);
-}
-
-
-// Sub-index for Temperature (°C)
-// Q_T = 100 if 28 <= T <= 32
-// Q_T = 20 + 80 * (T-25)/10 if 25 <= T < 35
-// Q_T = 20 if T < 25 or T > 35
-function calcTempScore(tempC: number): number {
-  if (tempC >= 28 && tempC <= 32) return 100;
-  if (tempC < 25 || tempC > 35) return 20;
-  // 25 <= T < 28 or 32 < T <= 35
-  return clamp(20 + 80 * ((tempC - 25) / 10), 20, 100);
 }
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-function normalizedDistance(value: number, min: number, max: number): number {
-  if (value >= min && value <= max) {
-    return 0;
-  }
-
+function outerBounds(min: number, max: number) {
   const span = max - min;
-  if (value < min) {
-    return (min - value) / span;
-  }
-
-  return (value - max) / span;
+  return { outerMin: min - span * FALLOFF_FACTOR, outerMax: max + span * FALLOFF_FACTOR };
 }
 
+/** Generic linear scoring helper
+ * - Returns 100 inside ideal range
+ * - Linearly interpolates to MIN_SCORE at outer bounds
+ * - Returns MIN_SCORE beyond outer bounds
+ */
+function calcScoreGeneric(value: number, rule: { min: number; max: number }): number {
+  const { min, max } = rule;
+  if (value >= min && value <= max) return MAX_SCORE;
+
+  const { outerMin, outerMax } = outerBounds(min, max);
+
+  if (value < min) {
+    if (value <= outerMin) return MIN_SCORE;
+    const ratio = (min - value) / (min - outerMin); // 0..1
+    return clamp(MAX_SCORE - (MAX_SCORE - MIN_SCORE) * ratio, MIN_SCORE, MAX_SCORE);
+  }
+
+  // value > max
+  if (value >= outerMax) return MIN_SCORE;
+  const ratio = (value - max) / (outerMax - max);
+  return clamp(MAX_SCORE - (MAX_SCORE - MIN_SCORE) * ratio, MIN_SCORE, MAX_SCORE);
+}
+
+function normalizedDistance(value: number, min: number, max: number): number {
+  // 0 = inside ideal range, increasing as value moves away; 1+ when beyond outer bounds
+  if (value >= min && value <= max) return 0;
+  const { outerMin, outerMax } = outerBounds(min, max);
+  if (value < min) return (min - value) / (min - outerMin);
+  return (value - max) / (outerMax - max);
+}
+
+export function calcDOScore(do_ppm: number): number {
+  return calcScoreGeneric(do_ppm, RULES.do);
+}
+
+export function calcPhScore(ph: number): number {
+  return calcScoreGeneric(ph, RULES.ph);
+}
+
+export function calcTempScore(tempC: number): number {
+  return calcScoreGeneric(tempC, RULES.temp);
+}
 
 /**
  * Calculates Water Quality Index (WQI) for aquaculture.
@@ -84,8 +82,7 @@ export function calculateWQI(data: SmartFeederSensorData): WQIResult {
   const phScore = calcPhScore(data.ph);
   const tempScore = calcTempScore(tempAvg);
 
-  const raw =
-    WEIGHTS.do * doScore + WEIGHTS.ph * phScore + WEIGHTS.temp * tempScore;
+  const raw = WEIGHTS.do * doScore + WEIGHTS.ph * phScore + WEIGHTS.temp * tempScore;
   const score = round1(raw);
 
   let status: WQIStatus;
@@ -112,17 +109,16 @@ export function calculateWQI(data: SmartFeederSensorData): WQIResult {
   };
 }
 
+/** Generate insight string based on the worst parameter (DO, pH, or Temp).
 
-/**
- * Generate insight string based on the worst parameter (DO, pH, or Temp).
  */
 export function getRecommendation(data: SmartFeederSensorData): string {
   const tempAvg = (data.surfaceTemp + 2 * data.midTemp + data.bottomTemp) / 4;
 
   const priorities = [
-    { param: "temp" as const, severity: normalizedDistance(tempAvg, 26, 32) },
-    { param: "ph" as const, severity: normalizedDistance(data.ph, 7.0, 8.5) },
-    { param: "do" as const, severity: normalizedDistance(data.dissolvedOxygen, 4, 6) },
+    { param: "temp" as const, severity: normalizedDistance(tempAvg, RULES.temp.min, RULES.temp.max) },
+    { param: "ph" as const, severity: normalizedDistance(data.ph, RULES.ph.min, RULES.ph.max) },
+    { param: "do" as const, severity: normalizedDistance(data.dissolvedOxygen, RULES.do.min, RULES.do.max) },
   ];
 
   const worst = priorities.reduce((a, b) => (a.severity >= b.severity ? a : b));
@@ -130,10 +126,10 @@ export function getRecommendation(data: SmartFeederSensorData): string {
   switch (worst.param) {
     case "temp": {
       const val = tempAvg.toFixed(1);
-      if (tempAvg >= 26 && tempAvg <= 32) {
+      if (tempAvg >= RULES.temp.min && tempAvg <= RULES.temp.max) {
         return `Suhu rata-rata air berada dalam rentang baik (${val} C).`;
       }
-      if (tempAvg > 32) {
+      if (tempAvg > RULES.temp.max) {
         return `Suhu rata-rata air terlalu tinggi (${val} C). Lakukan pendinginan pada air tambak/masukkan sumber air dingin ke dalam tambak!`;
       }
       return `Suhu rata-rata air terlalu rendah (${val} C). Lakukan pemanasan pada air tambak/masukkan sumber air panas ke dalam tambak!`;
@@ -141,21 +137,21 @@ export function getRecommendation(data: SmartFeederSensorData): string {
 
     case "ph": {
       const val = data.ph.toFixed(1);
-      if (data.ph >= 7.0 && data.ph <= 8.5) {
+      if (data.ph >= RULES.ph.min && data.ph <= RULES.ph.max) {
         return `Keasaman (pH) air berada dalam rentang baik (${val}).`;
       }
-      if (data.ph > 8.5) {
-        return `Air terlalu asam (pH tinggi) (${val}). Segera ganti air tambak anda!`;
+      if (data.ph > RULES.ph.max) {
+        return `Air terlalu basa (pH tinggi) (${val}). Lakukan pengapuran/pembersihan sisa pakan udang!`;
       }
-      return `Air terlalu basa (pH rendah) (${val}). Lakukan pengapuran/pembersihan sisa pakan udang!`;
+      return `Air terlalu asam (pH rendah) (${val}). Segera ganti air tambak anda!`;
     }
 
     case "do": {
       const val = data.dissolvedOxygen.toFixed(1);
-      if (data.dissolvedOxygen >= 4 && data.dissolvedOxygen <= 6) {
+      if (data.dissolvedOxygen >= RULES.do.min && data.dissolvedOxygen <= RULES.do.max) {
         return `Kadar oksigen berada dalam kondisi baik (${val} ppm).`;
       }
-      if (data.dissolvedOxygen > 6) {
+      if (data.dissolvedOxygen > RULES.do.max) {
         return `Kadar oksigen terlalu tinggi (${val} ppm). Kurangi kecepatan aerator/kincir air!`;
       }
       return `Kadar oksigen terlalu rendah (${val} ppm). Nyalakan/tingkatkan kecepatan aerator/kincir air!`;
@@ -164,36 +160,35 @@ export function getRecommendation(data: SmartFeederSensorData): string {
 }
 
 export const generateInsights = getRecommendation;
+
 /**
  * Utility: Check for temperature stratification (difference between layers).
  * If delta > threshold (e.g. 2°C), flag for aeration.
  */
-export function checkStratification(
-  surface: number,
-  middle: number,
-  bottom: number,
-  threshold = 2
-): boolean {
+export function checkStratification(surface: number, middle: number, bottom: number, threshold = 2): boolean {
   const delta12 = Math.abs(surface - middle);
   const delta23 = Math.abs(middle - bottom);
   return delta12 > threshold || delta23 > threshold;
 }
 
 export function getTemperatureStatus(tempC: number): WQIStatus {
-  if (tempC >= 26 && tempC <= 32) return "safe";
-  if (tempC < 24 || tempC > 34) return "critical";
+  if (tempC >= RULES.temp.min && tempC <= RULES.temp.max) return "safe";
+  const { outerMin, outerMax } = outerBounds(RULES.temp.min, RULES.temp.max);
+  if (tempC < outerMin || tempC > outerMax) return "critical";
   return "warning";
 }
 
 export function getDOStatus(do_ppm: number): WQIStatus {
-  if (do_ppm >= 4 && do_ppm <= 6) return "safe";
-  if (do_ppm < 3 || do_ppm > 7) return "critical";
+  if (do_ppm >= RULES.do.min && do_ppm <= RULES.do.max) return "safe";
+  const { outerMin, outerMax } = outerBounds(RULES.do.min, RULES.do.max);
+  if (do_ppm < outerMin || do_ppm > outerMax) return "critical";
   return "warning";
 }
 
 export function getPhStatus(ph: number): WQIStatus {
-  if (ph >= 7.0 && ph <= 8.5) return "safe";
-  if (ph < 6.5 || ph > 9.0) return "critical";
+  if (ph >= RULES.ph.min && ph <= RULES.ph.max) return "safe";
+  const { outerMin, outerMax } = outerBounds(RULES.ph.min, RULES.ph.max);
+  if (ph < outerMin || ph > outerMax) return "critical";
   return "warning";
 }
 
@@ -207,12 +202,12 @@ export function getStratificationStatus(
   surface: number,
   middle: number,
   bottom: number,
-  threshold = 2
+  threshold = 2,
 ): { stratified: boolean; message: string; delta12: number; delta23: number } {
   const delta12 = Math.abs(surface - middle);
   const delta23 = Math.abs(middle - bottom);
   const stratified = delta12 > threshold || delta23 > threshold;
-  let message = '';
+  let message = "";
   if (stratified) {
     message = `Stratifikasi suhu terdeteksi!\n\nBeda suhu antar lapisan: permukaan-tengah = ${delta12.toFixed(1)}°C, tengah-dasar = ${delta23.toFixed(1)}°C.\n\nStratifikasi dapat menyebabkan DO rendah di dasar kolam. Segera lakukan aerasi atau pengadukan air.`;
   } else {
