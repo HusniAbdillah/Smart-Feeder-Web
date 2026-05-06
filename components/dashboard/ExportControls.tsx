@@ -17,7 +17,7 @@ export function ExportControls({ data }: ExportControlsProps) {
     const headers = [
       "Waktu",
       "Suhu Permukaan (°C)",
-      "Suhu Tengah (°C)",
+      "Suhu Kolom (°C)",
       "Suhu Dasar (°C)",
       "Oksigen Terlarut (ppm)",
       "pH Air",
